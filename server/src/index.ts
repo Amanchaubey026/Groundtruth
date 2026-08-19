@@ -8,7 +8,7 @@ import { ingestRouter } from "./routes/ingest.js";
 import { itemsRouter } from "./routes/items.js";
 import { queryRouter } from "./routes/query.js";
 import { warmupEmbeddings } from "./services/embeddings.js";
-import { isLlmReachable } from "./services/llm.js";
+import { activeModelName, isLlmReachable } from "./services/llm.js";
 
 initDb();
 
@@ -40,6 +40,7 @@ app.get("/health", async (_req, res) => {
     status: "ok",
     llm: llm ? "reachable" : "unreachable",
     provider: config.llmProvider,
+    model: activeModelName(),
   });
 });
 

@@ -1,24 +1,67 @@
-import { useCallback, useState } from "react";
-import { queryKnowledge, type QueryResult } from "../api/client";
+import { useCallback, useRef, useState } from "react";
+import {
+  queryKnowledgeStream,
+  type QueryResult,
+  type QuerySource,
+} from "../api/client";
+
+export type QueryPhase = "idle" | "retrieving" | "streaming" | "done";
 
 export function useQuery() {
-  const [loading, setLoading] = useState(false);
+  const [phase, setPhase] = useState<QueryPhase>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<QueryResult | null>(null);
+  const [question, setQuestion] = useState<string | null>(null);
+  const [answer, setAnswer] = useState("");
+  const [sources, setSources] = useState<QuerySource[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const ask = useCallback(async (question: string) => {
-    setLoading(true);
+  const ask = useCallback(async (nextQuestion: string) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setPhase("retrieving");
     setError(null);
+    setQuestion(nextQuestion);
+    setAnswer("");
+    setSources([]);
+
     try {
-      const data = await queryKnowledge(question);
-      setResult(data);
+      await queryKnowledgeStream(
+        nextQuestion,
+        {
+          onSources: (nextSources) => {
+            setSources(nextSources);
+          },
+          onToken: (text) => {
+            setPhase("streaming");
+            setAnswer((current) => current + text);
+          },
+          onDone: (result: QueryResult) => {
+            setSources(result.sources);
+            setAnswer(result.answer);
+            setPhase("done");
+          },
+        },
+        controller.signal,
+      );
+      setPhase((current) => (current === "retrieving" ? "done" : current));
     } catch (err) {
-      setResult(null);
+      if (controller.signal.aborted) return;
+      setPhase("idle");
       setError(err instanceof Error ? err.message : "Failed to ask the question");
-    } finally {
-      setLoading(false);
     }
   }, []);
 
-  return { loading, error, result, ask };
+  const loading = phase === "retrieving" || phase === "streaming";
+
+  return {
+    phase,
+    loading,
+    error,
+    question,
+    answer,
+    sources,
+    ask,
+  };
 }

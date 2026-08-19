@@ -7,27 +7,37 @@ import { useQuery } from "./hooks/useQuery";
 
 export default function App() {
   const { items, loading: itemsLoading, error: itemsError, refresh } = useItems();
-  const { loading: queryLoading, error: queryError, result, ask } = useQuery();
+  const { phase, loading: queryLoading, error: queryError, question, answer, sources, ask } =
+    useQuery();
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-line bg-card/80">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-5">
+      <header className="border-b border-line bg-card/90 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-white">
             <InboxIcon />
           </div>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">AI Knowledge Inbox</h1>
+            <h1 className="font-display text-2xl tracking-tight">AI Knowledge Inbox</h1>
             <p className="text-sm text-muted">Save knowledge. Ask questions.</p>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
-        <AddItemForm onCreated={() => void refresh()} />
-        <ItemList items={items} loading={itemsLoading} error={itemsError} />
-        <QueryBox loading={queryLoading} error={queryError} onAsk={ask} />
-        <AnswerPanel loading={queryLoading} result={result} />
+      <main className="mx-auto grid max-w-6xl gap-4 px-4 py-6 lg:grid-cols-[minmax(300px,400px)_minmax(0,1fr)] lg:items-start">
+        <div className="flex flex-col gap-4 lg:sticky lg:top-4">
+          <AddItemForm onCreated={() => void refresh()} />
+          <ItemList items={items} loading={itemsLoading} error={itemsError} />
+        </div>
+        <div className="flex flex-col gap-4">
+          <QueryBox loading={queryLoading} error={queryError} onAsk={ask} />
+          <AnswerPanel
+            phase={phase}
+            question={question}
+            answer={answer}
+            sources={sources}
+          />
+        </div>
       </main>
     </div>
   );

@@ -9,7 +9,12 @@ export default defineConfig({
     proxy: {
       "/ingest": { target: "http://127.0.0.1:4000", changeOrigin: true },
       "/items": { target: "http://127.0.0.1:4000", changeOrigin: true },
-      "/query": { target: "http://127.0.0.1:4000", changeOrigin: true },
+      "/query": {
+        target: "http://127.0.0.1:4000",
+        changeOrigin: true,
+        timeout: 600_000,
+        proxyTimeout: 600_000,
+      },
       "/health": { target: "http://127.0.0.1:4000", changeOrigin: true },
     },
   },

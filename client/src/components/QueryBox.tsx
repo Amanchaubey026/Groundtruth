@@ -18,10 +18,10 @@ export function QueryBox({ loading, error, onAsk }: QueryBoxProps) {
 
   return (
     <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold tracking-tight">Ask your knowledge</h2>
+      <div className="mb-3">
+        <h2 className="font-display text-xl text-ink">Ask your knowledge</h2>
         <p className="mt-1 text-sm text-muted">
-          Questions are answered only from the notes and pages you have saved.
+          Answers come only from notes and pages you have saved.
         </p>
       </div>
 
@@ -32,7 +32,7 @@ export function QueryBox({ loading, error, onAsk }: QueryBoxProps) {
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             rows={3}
-            placeholder="What did the article say about server components?"
+            placeholder="What is retrieval-augmented generation?"
             className="w-full resize-y rounded-xl border border-line bg-white px-3 py-2 text-sm leading-6 outline-none ring-accent/30 focus:ring-2"
             disabled={loading}
           />
@@ -40,7 +40,7 @@ export function QueryBox({ loading, error, onAsk }: QueryBoxProps) {
 
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-muted" aria-live="polite">
-            {loading ? "Searching your knowledge…" : "\u00a0"}
+            {loading ? "Streaming a grounded answer…" : "\u00a0"}
           </p>
           <button
             type="submit"

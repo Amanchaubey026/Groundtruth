@@ -58,6 +58,7 @@ export interface RetrievedSource {
 }
 
 export interface QuerySource {
+  sourceNumber: number;
   itemId: string;
   title: string | null;
   url: string | null;

@@ -10,7 +10,7 @@ export function ItemList({ items, loading, error }: ItemListProps) {
   return (
     <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold tracking-tight">Saved items</h2>
+        <h2 className="font-display text-xl text-ink">Saved items</h2>
         <p className="mt-1 text-sm text-muted">
           {loading ? "Loading…" : `${items.length} item${items.length === 1 ? "" : "s"}`}
         </p>
@@ -28,7 +28,7 @@ export function ItemList({ items, loading, error }: ItemListProps) {
           <p className="mt-1 text-sm text-muted">Add a note or URL to get started.</p>
         </div>
       ) : (
-        <ul className="divide-y divide-line">
+        <ul className="max-h-[28rem] divide-y divide-line overflow-y-auto pr-1">
           {items.map((item) => (
             <li key={item.id} className="py-3 first:pt-0 last:pb-0">
               <div className="flex items-baseline justify-between gap-3">
