@@ -43,13 +43,11 @@ export default function App() {
 
 function Mark() {
   return (
-    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink text-white">
-      <svg width="22" height="16" viewBox="0 0 26 18" aria-hidden="true">
-        <path
-          fill="currentColor"
-          d="M8.6 0c4.8 0 8.4 3.3 8.4 9s-3.6 9-8.4 9H0V0h8.6Zm-.4 15.2c2.7 0 4.7-2 4.7-6.2S10.9 2.8 8.2 2.8H3.4v12.4h4.8ZM14.4 0h11.2v2.8h-4.2V18h-3.4V2.8h-3.6V0Z"
-        />
-      </svg>
+    <div
+      className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink font-display text-[12px] font-extrabold tracking-tight text-white"
+      aria-hidden="true"
+    >
+      GT
     </div>
   );
 }
