@@ -14,9 +14,21 @@ initDb();
 
 const app = express();
 
+const allowedOrigins = new Set([
+  config.clientUrl,
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
+
 app.use(
   cors({
-    origin: config.clientUrl,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
   }),
 );
 app.use(express.json({ limit: "1mb" }));
@@ -46,7 +58,7 @@ app.use((_req, res) => {
 
 app.use(errorHandler);
 
-app.listen(config.port, () => {
+app.listen(config.port, "0.0.0.0", () => {
   logger.info("Server started", {
     port: config.port,
     clientUrl: config.clientUrl,

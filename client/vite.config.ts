@@ -6,5 +6,11 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
+    proxy: {
+      "/ingest": { target: "http://127.0.0.1:4000", changeOrigin: true },
+      "/items": { target: "http://127.0.0.1:4000", changeOrigin: true },
+      "/query": { target: "http://127.0.0.1:4000", changeOrigin: true },
+      "/health": { target: "http://127.0.0.1:4000", changeOrigin: true },
+    },
   },
 });
