@@ -30,7 +30,7 @@ export const config = {
     ? stringEnv("DB_PATH", "./data/inbox.db")
     : path.resolve(serverRoot, stringEnv("DB_PATH", "./data/inbox.db")),
   ollamaHost: stringEnv("OLLAMA_HOST", "http://localhost:11434").replace(/\/$/, ""),
-  ollamaModel: stringEnv("OLLAMA_MODEL", "llama3.1:8b"),
+  ollamaModel: stringEnv("OLLAMA_MODEL", "gpt-oss:20b-cloud"),
   llmProvider: llmProvider === "xai" ? "xai" : "ollama",
   xaiApiKey: process.env.XAI_API_KEY?.trim() ?? "",
   xaiModel: stringEnv("XAI_MODEL", "grok-4.6"),

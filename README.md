@@ -22,7 +22,7 @@ The application is a personal knowledge inbox:
 - Save URLs with server-side fetch + Readability extraction
 - SQLite storage for items, chunks, and embeddings
 - Local embeddings (`Xenova/all-MiniLM-L6-v2`)
-- Local LLM via Ollama (`llama3.1:8b` by default)
+- LLM via Ollama (`gpt-oss:20b-cloud` by default)
 - Grounded RAG answers with numbered citations
 - Source snippets and similarity scores in the UI
 - Structured JSON logs and consistent API errors
@@ -74,7 +74,7 @@ HTTP request → validation → service → response
 | Vectors | `chunks.embedding` BLOBs | Explicitly allowed; no dedicated vector DB |
 | Retrieval | Brute-force cosine similarity | Simple and enough for a small corpus |
 | Embeddings | `Xenova/all-MiniLM-L6-v2` | Local, free, 384 dimensions |
-| LLM | Ollama (`llama3.1:8b`) | Local, no API key |
+| LLM | Ollama (`gpt-oss:20b-cloud`) | Default model served through local Ollama |
 | Optional LLM | SpaceXAI (`grok-4.6`) | Hosted swap behind the same `llm.ts` interface |
 | URL extraction | `fetch` + jsdom + Readability | Server-side readable content |
 | Frontend | React + Vite + TypeScript + Tailwind | Small UI, hooks only |
@@ -106,19 +106,31 @@ Install from [https://ollama.com](https://ollama.com).
 
 ### 4. Pull a model
 
-Default:
+Default (Ollama Cloud):
+
+```bash
+ollama pull gpt-oss:20b-cloud
+```
+
+Cloud models require an Ollama account. If pull asks you to sign in:
+
+```bash
+ollama signin
+```
+
+Fully local alternatives, if you prefer not to use Cloud:
 
 ```bash
 ollama pull llama3.1:8b
 ```
 
-Lower-RAM machines:
+or, on a lower-RAM machine:
 
 ```bash
 ollama pull phi3:mini
 ```
 
-Then set `OLLAMA_MODEL=phi3:mini` in `.env`.
+Then set `OLLAMA_MODEL` in `.env` to the model you pulled.
 
 ### 5. Start Ollama
 
@@ -139,7 +151,7 @@ Defaults:
 ```env
 PORT=4000
 OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=llama3.1:8b
+OLLAMA_MODEL=gpt-oss:20b-cloud
 CLIENT_URL=http://localhost:5173
 MIN_SIMILARITY=0.30
 TOP_K=4
@@ -347,15 +359,16 @@ Tradeoff: search is **O(n)** in the number of chunks. At tens or hundreds of tho
 
 ## LLM Choice
 
-The RAG layer calls `services/llm.ts`, not Ollama directly. Today the default implementation is Ollama:
+The RAG layer calls `services/llm.ts`, not Ollama directly. Today the default implementation is Ollama with `gpt-oss:20b-cloud`:
 
 ```text
 POST http://localhost:11434/api/chat
+model: gpt-oss:20b-cloud
 ```
 
-Advantages: free, local, no API key, offline after the model download.
+That model is served through the local Ollama process (`OLLAMA_HOST`) as an Ollama Cloud model, so you need Ollama installed and signed in. You can point `OLLAMA_MODEL` at a fully local model such as `llama3.1:8b` or `phi3:mini` instead.
 
-Tradeoffs: slower inference, hardware-dependent quality/latency, extra reviewer setup, weaker than frontier hosted models.
+Tradeoffs: Cloud models need network and an Ollama account; fully local models are hardware-bound and usually slower or weaker.
 
 ### Optional hosted model (SpaceXAI)
 
