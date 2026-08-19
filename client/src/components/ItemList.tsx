@@ -8,51 +8,55 @@ interface ItemListProps {
 
 export function ItemList({ items, loading, error }: ItemListProps) {
   return (
-    <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-      <div className="mb-4">
-        <h2 className="font-display text-xl text-ink">Saved items</h2>
-        <p className="mt-1 text-sm text-muted">
-          {loading ? "Loading…" : `${items.length} item${items.length === 1 ? "" : "s"}`}
+    <section className="flex min-h-80 flex-1 flex-col bg-paper p-6 md:p-8">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="eyebrow">02 / Archive</p>
+          <h2 className="font-display mt-3 text-3xl leading-none tracking-tight">Saved items</h2>
+        </div>
+        <p className="text-sm text-muted">
+          {loading ? "…" : String(items.length).padStart(2, "0")}
         </p>
       </div>
 
       {error ? (
-        <p className="text-sm text-danger" role="alert">
+        <p className="mt-4 text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
 
       {!loading && items.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-line bg-paper px-4 py-8 text-center">
-          <p className="font-medium">You haven't saved anything yet.</p>
-          <p className="mt-1 text-sm text-muted">Add a note or URL to get started.</p>
+        <div className="mt-8 border border-ink/15 px-4 py-10">
+          <p className="font-display text-xl tracking-tight">Nothing saved yet.</p>
+          <p className="mt-2 text-sm text-muted">Add a note or URL to start the corpus.</p>
         </div>
       ) : (
-        <ul className="max-h-[28rem] divide-y divide-line overflow-y-auto pr-1">
-          {items.map((item) => (
-            <li key={item.id} className="py-3 first:pt-0 last:pb-0">
+        <ul className="mt-6 max-h-[32rem] overflow-y-auto">
+          {items.map((item, index) => (
+            <li key={item.id} className="border-t border-ink/15 py-4">
               <div className="flex items-baseline justify-between gap-3">
-                <h3 className="font-medium">
-                  {item.title || (item.sourceType === "note" ? "Note" : "Untitled page")}
-                </h3>
-                <span className="shrink-0 rounded-full bg-paper px-2 py-0.5 text-xs uppercase tracking-wide text-muted">
-                  {item.sourceType}
-                </span>
+                <p className="text-[0.65rem] tracking-[0.18em] text-muted">
+                  {String(index + 1).padStart(2, "0")} / {item.sourceType}
+                </p>
+                <time className="text-[0.65rem] tracking-wide text-muted" dateTime={item.createdAt}>
+                  {formatTimestamp(item.createdAt)}
+                </time>
               </div>
-              <p className="mt-1 text-sm leading-6 text-muted">{item.preview}</p>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-                <time dateTime={item.createdAt}>{formatTimestamp(item.createdAt)}</time>
-                {item.sourceUrl ? (
-                  <a
-                    href={item.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-accent hover:underline"
-                  >
-                    {displayUrl(item.sourceUrl)}
-                  </a>
-                ) : null}
-              </div>
+              <h3 className="mt-2 font-display text-xl leading-tight tracking-tight">
+                {item.title || (item.sourceType === "note" ? "Note" : "Untitled page")}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-muted">{item.preview}</p>
+              {item.sourceUrl ? (
+                <a
+                  href={item.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex items-center gap-2 text-xs tracking-[0.12em] uppercase"
+                >
+                  {displayUrl(item.sourceUrl)}
+                  <span aria-hidden="true">↗</span>
+                </a>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -64,13 +68,17 @@ export function ItemList({ items, loading, error }: ItemListProps) {
 function formatTimestamp(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function displayUrl(url: string): string {
   try {
     const parsed = new URL(url);
-    return parsed.hostname + parsed.pathname.replace(/\/$/, "");
+    return parsed.hostname.replace(/^www\./, "");
   } catch {
     return url;
   }

@@ -26,93 +26,104 @@ export function AnswerPanel({ phase, question, answer, sources }: AnswerPanelPro
 
   if (empty) {
     return (
-      <section className="rounded-2xl border border-dashed border-line bg-card/70 p-6">
-        <h2 className="font-display text-xl text-ink">Answer</h2>
-        <p className="mt-2 text-sm leading-6 text-muted">
-          Ask a question to get a grounded answer with inline citations and source snippets.
-        </p>
+      <section className="flex min-h-[28rem] flex-col justify-between bg-paper p-6 md:p-10">
+        <div>
+          <p className="eyebrow">03 / Answer</p>
+          <h2 className="font-display mt-4 max-w-lg text-4xl leading-[0.95] tracking-tight md:text-6xl">
+            Ask to begin.
+          </h2>
+          <p className="mt-5 max-w-md text-sm leading-6 text-muted">
+            Questions are answered only from ingested notes and pages. If nothing is relevant,
+            the model is not asked to guess.
+          </p>
+        </div>
+        <p className="text-[0.7rem] tracking-[0.22em] uppercase text-muted">Ready</p>
       </section>
     );
   }
 
   return (
-    <section className="rounded-2xl border border-line bg-card p-5 shadow-sm md:p-6">
-      <div className="flex items-start justify-between gap-3">
+    <section className="bg-paper p-6 md:p-10">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Answer</p>
+          <p className="eyebrow">03 / Answer</p>
           {question ? (
-            <p className="mt-1 font-display text-lg leading-snug text-ink">{question}</p>
+            <h2 className="font-display mt-3 max-w-3xl text-3xl leading-[1.05] tracking-tight md:text-5xl">
+              {question}
+            </h2>
           ) : null}
         </div>
-        <StatusChip phase={phase} />
+        <StatusLabel phase={phase} />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-8 border-t border-ink pt-8">
         {retrieving && !answer ? (
-          <p className="text-sm text-muted">Searching your knowledge…</p>
+          <p className="text-sm tracking-wide text-muted">Retrieving relevant sources…</p>
         ) : (
           <MarkdownAnswer markdown={answer} streaming={streaming} onCite={focusSource} />
         )}
       </div>
 
-      <h3 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">Sources</h3>
-      {sources.length === 0 && phase === "done" ? (
-        <p className="mt-2 text-sm text-muted">
-          I couldn't find relevant information in your saved content.
-        </p>
-      ) : (
-        <ol className="mt-3 space-y-3">
-          {sources.map((source) => {
-            const n = source.sourceNumber;
-            const active = activeSource === n;
-            return (
-              <li
-                key={`${source.itemId}-${n}`}
-                id={`source-${n}`}
-                className={`rounded-xl border p-3 transition-colors ${
-                  active ? "border-accent bg-accent-soft" : "border-line bg-paper"
-                }`}
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-medium">
-                    <span className="mr-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-white">
-                      {n}
+      <div className="mt-12">
+        <p className="eyebrow">Sources</p>
+        {sources.length === 0 && phase === "done" ? (
+          <p className="mt-4 text-sm text-muted">
+            I couldn't find relevant information in your saved content.
+          </p>
+        ) : (
+          <ol className="mt-5 grid gap-px bg-ink sm:grid-cols-2">
+            {sources.map((source) => {
+              const n = source.sourceNumber;
+              const active = activeSource === n;
+              return (
+                <li
+                  key={`${source.itemId}-${n}`}
+                  id={`source-${n}`}
+                  className={`p-5 ${active ? "bg-ink text-white" : "bg-paper text-ink"}`}
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className={`font-display text-3xl tracking-tight ${active ? "text-white" : ""}`}>
+                      {String(n).padStart(2, "0")}
+                    </p>
+                    <span className={`text-[0.65rem] tracking-[0.16em] uppercase ${active ? "text-white/50" : "text-muted"}`}>
+                      {(source.score * 100).toFixed(0)}% match
                     </span>
+                  </div>
+                  <h3 className="mt-4 font-display text-xl leading-tight tracking-tight">
                     {source.title || "Untitled"}
+                  </h3>
+                  <p className={`mt-3 text-sm leading-6 ${active ? "text-white/70" : "text-muted"}`}>
+                    {source.snippet}
                   </p>
-                  <span className="shrink-0 text-xs text-muted">
-                    {(source.score * 100).toFixed(0)}% match
-                  </span>
-                </div>
-                <p className="mt-2 text-sm leading-6 text-muted">{source.snippet}</p>
-                {source.url ? (
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 inline-block text-xs text-accent hover:underline"
-                  >
-                    {source.url}
-                  </a>
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-      )}
+                  {source.url ? (
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`mt-4 inline-flex items-center gap-2 text-[0.7rem] tracking-[0.16em] uppercase ${
+                        active ? "text-white" : ""
+                      }`}
+                    >
+                      Open source ↗
+                    </a>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
     </section>
   );
 }
 
-function StatusChip({ phase }: { phase: QueryPhase }) {
-  if (phase === "retrieving") {
-    return <span className="rounded-full bg-paper px-2.5 py-1 text-xs text-muted">Retrieving</span>;
-  }
-  if (phase === "streaming") {
-    return <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs text-accent-dark">Writing</span>;
-  }
-  if (phase === "done") {
-    return <span className="rounded-full bg-paper px-2.5 py-1 text-xs text-muted">Grounded</span>;
-  }
-  return null;
+function StatusLabel({ phase }: { phase: QueryPhase }) {
+  const label =
+    phase === "retrieving" ? "Retrieving" : phase === "streaming" ? "Writing" : phase === "done" ? "Grounded" : "";
+  if (!label) return null;
+  return (
+    <span className="shrink-0 border border-ink px-3 py-1 text-[0.65rem] tracking-[0.18em] uppercase">
+      {label}
+    </span>
+  );
 }
