@@ -3,12 +3,11 @@
 @theme {
   --font-sans: Outfit, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-display: Syne, Outfit, sans-serif;
-  --color-ink: #0a0a0a;
-  --color-paper: #ffffff;
-  --color-soft: #f3f3f3;
-  --color-muted: #6e6e6e;
-  --color-line: #111111;
-  --color-hair: #e6e6e6;
+  --color-ink: #111111;
+  --color-paper: #f6f6f4;
+  --color-card: #ffffff;
+  --color-muted: #5c5c5c;
+  --color-line: #e4e4e0;
   --color-danger: #c81e1e;
 }
 
@@ -34,72 +33,61 @@ body {
   font-family: var(--font-display);
 }
 
-.eyebrow {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.65rem;
-  min-height: 3.15rem;
-  padding: 0 1.35rem;
+  min-height: 2.5rem;
+  padding: 0 1rem;
   border: 0;
-  background: #000;
+  border-radius: 0.5rem;
+  background: #111;
   color: #fff;
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   cursor: pointer;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1a1a1a;
+  background: #2a2a2a;
 }
 
 .btn-primary:disabled {
   cursor: not-allowed;
-  opacity: 0.35;
+  opacity: 0.4;
 }
 
 .field {
   width: 100%;
-  border: 1px solid #111;
+  border: 1px solid var(--color-line);
   background: #fff;
-  color: #0a0a0a;
-  padding: 0.85rem 1rem;
+  color: #111;
+  border-radius: 0.5rem;
+  padding: 0.7rem 0.85rem;
   font: inherit;
   font-size: 0.95rem;
-  line-height: 1.55;
+  line-height: 1.5;
   outline: none;
-  border-radius: 0;
 }
 
 .field:focus {
-  outline: 1px solid #000;
-  outline-offset: 2px;
+  border-color: #111;
 }
 
 .field:disabled {
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
-.panel {
-  border: 1px solid #111;
+.card {
   background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 0.9rem;
 }
 
 .answer-prose {
-  color: #0a0a0a;
-  font-size: 1.08rem;
+  color: #111;
+  font-size: 1rem;
   line-height: 1.7;
-  font-weight: 400;
 }
 
 .answer-prose > *:first-child {
@@ -111,30 +99,28 @@ body {
 .answer-prose h3 {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-  margin: 1.15em 0 0.4em;
+  line-height: 1.25;
+  margin: 1em 0 0.35em;
 }
 
 .answer-prose h1 {
-  font-size: 2rem;
+  font-size: 1.35rem;
 }
 
 .answer-prose h2 {
-  font-size: 1.45rem;
+  font-size: 1.2rem;
 }
 
 .answer-prose h3 {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
 }
 
 .answer-prose p,
 .answer-prose ul,
 .answer-prose ol,
 .answer-prose pre,
-.answer-prose blockquote,
-.answer-prose table {
-  margin: 0.8em 0;
+.answer-prose blockquote {
+  margin: 0.7em 0;
 }
 
 .answer-prose ul,
@@ -142,28 +128,26 @@ body {
   padding-left: 1.2rem;
 }
 
-.answer-prose li + li {
-  margin-top: 0.28em;
-}
-
 .answer-prose a {
-  color: #0a0a0a;
+  color: #111;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .answer-prose code {
-  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-  font-size: 0.86em;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.88em;
   background: #f3f3f3;
   padding: 0.08em 0.32em;
+  border-radius: 0.25rem;
 }
 
 .answer-prose pre {
   overflow-x: auto;
-  background: #0a0a0a;
+  background: #111;
   color: #f5f5f5;
-  padding: 1rem 1.1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.6rem;
   font-size: 0.88rem;
 }
 
@@ -173,40 +157,21 @@ body {
   color: inherit;
 }
 
-.answer-prose blockquote {
-  border-left: 2px solid #000;
-  padding-left: 0.9rem;
-  color: #444;
-}
-
-.answer-prose table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.95rem;
-}
-
-.answer-prose th,
-.answer-prose td {
-  border: 1px solid #111;
-  padding: 0.4rem 0.55rem;
-  text-align: left;
-}
-
 .citation {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.1rem;
-  height: 1.1rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
   margin: 0 0.12rem;
   padding: 0 0.28rem;
   border: 0;
-  background: #000;
+  border-radius: 999px;
+  background: #111;
   color: #fff;
   font-family: var(--font-sans);
-  font-size: 0.64rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
   line-height: 1;
   vertical-align: super;
   cursor: pointer;
@@ -218,10 +183,10 @@ body {
 
 .stream-caret {
   display: inline-block;
-  width: 0.42rem;
+  width: 0.4rem;
   height: 1em;
   margin-left: 0.12rem;
-  background: #000;
+  background: #111;
   vertical-align: text-bottom;
   animation: blink 1s step-end infinite;
 }
@@ -230,19 +195,4 @@ body {
   50% {
     opacity: 0;
   }
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.rise {
-  animation: rise 0.7s ease both;
 }

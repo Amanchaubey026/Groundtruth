@@ -8,53 +8,41 @@ interface ItemListProps {
 
 export function ItemList({ items, loading, error }: ItemListProps) {
   return (
-    <section className="flex min-h-80 flex-1 flex-col bg-paper p-6 md:p-8">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="eyebrow">02 / Archive</p>
-          <h2 className="font-display mt-3 text-3xl leading-none tracking-tight">Saved items</h2>
-        </div>
-        <p className="text-sm text-muted">
-          {loading ? "…" : String(items.length).padStart(2, "0")}
-        </p>
+    <section className="card p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-base font-semibold">Saved</h2>
+        <p className="text-sm text-muted">{loading ? "Loading…" : `${items.length}`}</p>
       </div>
 
       {error ? (
-        <p className="mt-4 text-sm text-danger" role="alert">
+        <p className="mt-3 text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
 
       {!loading && items.length === 0 ? (
-        <div className="mt-8 border border-ink/15 px-4 py-10">
-          <p className="font-display text-xl tracking-tight">Nothing saved yet.</p>
-          <p className="mt-2 text-sm text-muted">Add a note or URL to start the corpus.</p>
-        </div>
+        <p className="mt-4 text-sm leading-6 text-muted">
+          Nothing here yet. Add a note or a link on the left.
+        </p>
       ) : (
-        <ul className="mt-6 max-h-[32rem] overflow-y-auto">
-          {items.map((item, index) => (
-            <li key={item.id} className="border-t border-ink/15 py-4">
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="text-[0.65rem] tracking-[0.18em] text-muted">
-                  {String(index + 1).padStart(2, "0")} / {item.sourceType}
-                </p>
-                <time className="text-[0.65rem] tracking-wide text-muted" dateTime={item.createdAt}>
-                  {formatTimestamp(item.createdAt)}
-                </time>
+        <ul className="mt-3 max-h-[28rem] divide-y divide-line overflow-y-auto">
+          {items.map((item) => (
+            <li key={item.id} className="py-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="text-sm font-medium">
+                  {item.title || (item.sourceType === "note" ? "Note" : "Untitled page")}
+                </h3>
+                <span className="text-xs text-muted">{item.sourceType === "url" ? "Link" : "Note"}</span>
               </div>
-              <h3 className="mt-2 font-display text-xl leading-tight tracking-tight">
-                {item.title || (item.sourceType === "note" ? "Note" : "Untitled page")}
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-muted">{item.preview}</p>
+              <p className="mt-1 line-clamp-2 text-sm leading-5 text-muted">{item.preview}</p>
               {item.sourceUrl ? (
                 <a
                   href={item.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-2 inline-flex items-center gap-2 text-xs tracking-[0.12em] uppercase"
+                  className="mt-1 inline-block text-xs text-ink underline underline-offset-2"
                 >
                   {displayUrl(item.sourceUrl)}
-                  <span aria-hidden="true">↗</span>
                 </a>
               ) : null}
             </li>
@@ -65,20 +53,9 @@ export function ItemList({ items, loading, error }: ItemListProps) {
   );
 }
 
-function formatTimestamp(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function displayUrl(url: string): string {
   try {
-    const parsed = new URL(url);
-    return parsed.hostname.replace(/^www\./, "");
+    return new URL(url).hostname.replace(/^www\./, "");
   } catch {
     return url;
   }
