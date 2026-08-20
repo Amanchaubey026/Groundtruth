@@ -4,6 +4,12 @@ Save notes or URLs, then ask questions. Answers come from a small RAG pipeline o
 
 Embeddings and SQLite stay local. The **default LLM is Ollama `phi3:mini`** (small and relatively fast). Pick another pulled model (or OpenRouter, if a key is set) in the header. You do not need to change `.env` to switch models.
 
+## Demo
+
+[Watch the demo](client/assets/demo.mp4)
+
+<video src="client/assets/demo.mp4" controls width="720"></video>
+
 ## Run
 
 Needs Node 20+ and two terminals.
