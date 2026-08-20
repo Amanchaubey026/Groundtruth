@@ -1,3 +1,4 @@
+/** Local MiniLM embeddings. Documents and queries must share this model or cosine scores are meaningless. */
 import { pipeline, type FeatureExtractionPipeline } from "@huggingface/transformers";
 import { AppError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
@@ -115,6 +116,7 @@ export function serializeEmbedding(vector: Float32Array): Buffer {
 }
 
 export function deserializeEmbedding(buffer: Buffer): Float32Array {
+  // Copy out of SQLite's Buffer; a view on the original pool can be overwritten.
   const copy = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
   return new Float32Array(copy);
 }

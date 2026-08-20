@@ -22,7 +22,7 @@ export function ItemList({ items, loading, error }: ItemListProps) {
 
       {!loading && items.length === 0 ? (
         <p className="mt-4 text-sm leading-6 text-muted">
-          Nothing here yet. Add a note or a link on the left.
+          Nothing here yet. Add a note or a link above.
         </p>
       ) : (
         <ul className="mt-3 max-h-[28rem] divide-y divide-line overflow-y-auto">

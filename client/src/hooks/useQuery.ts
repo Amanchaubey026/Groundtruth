@@ -7,6 +7,7 @@ import {
 
 export type QueryPhase = "idle" | "retrieving" | "streaming" | "done";
 
+/** One question at a time. New chat aborts the in-flight stream and clears the answer. */
 export function useQuery() {
   const [phase, setPhase] = useState<QueryPhase>("idle");
   const [error, setError] = useState<string | null>(null);

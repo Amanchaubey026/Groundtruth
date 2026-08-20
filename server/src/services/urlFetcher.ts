@@ -1,3 +1,4 @@
+/** Server-side URL ingest: http(s) only, timeout + size cap, Readability extract. Fetched HTML is never rendered in the UI. */
 import { JSDOM, VirtualConsole } from "jsdom";
 import { Readability } from "@mozilla/readability";
 import { config } from "../lib/config.js";

@@ -1,3 +1,4 @@
+-- items: saved notes/URLs. chunks: embedded slices. CASCADE drops vectors with the parent.
 CREATE TABLE IF NOT EXISTS items (
   id TEXT PRIMARY KEY,
   source_type TEXT NOT NULL,

@@ -16,6 +16,7 @@ const app = express();
 
 const allowedOrigins = new Set([
   config.clientUrl,
+  // Vite defaults — keep working even if CLIENT_URL is a LAN hostname.
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ]);

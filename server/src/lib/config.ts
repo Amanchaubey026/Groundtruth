@@ -6,6 +6,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const serverRoot = path.resolve(here, "../..");
 const repoRoot = path.resolve(serverRoot, "..");
 
+// Repo-root .env first. server/.env only fills keys that are still unset.
 dotenv.config({ path: path.join(repoRoot, ".env") });
 dotenv.config({ path: path.join(serverRoot, ".env") });
 

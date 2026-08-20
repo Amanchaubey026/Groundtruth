@@ -1,3 +1,4 @@
+// Dev uses the Vite proxy (empty base). Set VITE_API_URL if the API is on another origin.
 const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "" : "http://localhost:4000");
 
 export type SourceType = "note" | "url";

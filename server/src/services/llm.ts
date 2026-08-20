@@ -1,3 +1,4 @@
+/** LLM adapter. Retrieval never imports a provider; switch via LLM_PROVIDER. */
 import { config } from "../lib/config.js";
 import { AppError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
@@ -76,6 +77,7 @@ async function* streamChat(
   user: string,
   signal?: AbortSignal,
 ): AsyncGenerator<string> {
+  // Only this function branches on provider. Chunking, embeddings, and SQLite stay the same.
   if (config.llmProvider === "openrouter") {
     yield* streamWithOpenRouter(system, user, signal);
     return;

@@ -1,3 +1,4 @@
+/** Prepare a note or URL, chunk it, embed, and persist in one request. */
 import { randomUUID } from "node:crypto";
 import { insertItemWithChunks } from "../db/client.js";
 import { AppError } from "../lib/errors.js";

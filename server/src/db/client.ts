@@ -1,3 +1,4 @@
+/** SQLite with WAL. Schema is applied on startup; no migration runner. */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

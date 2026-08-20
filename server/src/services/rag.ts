@@ -1,8 +1,9 @@
+/** Retrieve top chunks, then stream a grounded answer. Skip the LLM when nothing is similar enough. */
 import { config } from "../lib/config.js";
 import { logger } from "../lib/logger.js";
 import type { QueryResponse, QuerySource, RetrievedSource } from "../types.js";
 import { embedQuery } from "./embeddings.js";
-import { activeModelName, generateAnswer, streamAnswer } from "./llm.js";
+import { activeModelName, streamAnswer } from "./llm.js";
 import { searchSimilar, toRetrievedSources } from "./vectorStore.js";
 
 export const NO_CONTENT_ANSWER =
