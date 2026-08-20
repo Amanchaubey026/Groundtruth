@@ -76,11 +76,67 @@ async function* streamChat(
   user: string,
   signal?: AbortSignal,
 ): AsyncGenerator<string> {
+  if (config.llmProvider === "openrouter") {
+    yield* streamWithOpenRouter(system, user, signal);
+    return;
+  }
   if (config.llmProvider === "xai") {
     yield* streamWithXai(system, user, signal);
     return;
   }
   yield* streamWithOllama(system, user, signal);
+}
+
+async function* streamWithOpenRouter(
+  system: string,
+  user: string,
+  signal?: AbortSignal,
+): AsyncGenerator<string> {
+  if (!config.openrouterApiKey) {
+    throw new AppError(
+      503,
+      "LLM_ERROR",
+      "OPENROUTER_API_KEY is required when LLM_PROVIDER=openrouter",
+    );
+  }
+
+  yield* streamOpenAiCompatible({
+    url: `${config.openrouterBaseUrl}/chat/completions`,
+    apiKey: config.openrouterApiKey,
+    model: config.openrouterModel,
+    system,
+    user,
+    signal,
+    providerLabel: "OpenRouter",
+    extraHeaders: {
+      "HTTP-Referer": config.clientUrl,
+      "X-Title": "Ground Truth",
+    },
+  });
+}
+
+async function* streamWithXai(
+  system: string,
+  user: string,
+  signal?: AbortSignal,
+): AsyncGenerator<string> {
+  if (!config.xaiApiKey) {
+    throw new AppError(
+      503,
+      "LLM_ERROR",
+      "XAI_API_KEY is required when LLM_PROVIDER=xai",
+    );
+  }
+
+  yield* streamOpenAiCompatible({
+    url: `${config.xaiBaseUrl}/chat/completions`,
+    apiKey: config.xaiApiKey,
+    model: config.xaiModel,
+    system,
+    user,
+    signal,
+    providerLabel: "xAI",
+  });
 }
 
 async function* streamWithOllama(
@@ -133,50 +189,49 @@ async function* streamWithOllama(
   });
 }
 
-async function* streamWithXai(
-  system: string,
-  user: string,
-  signal?: AbortSignal,
-): AsyncGenerator<string> {
-  if (!config.xaiApiKey) {
-    throw new AppError(
-      503,
-      "LLM_ERROR",
-      "XAI_API_KEY is required when LLM_PROVIDER=xai",
-    );
-  }
+interface OpenAiStreamOptions {
+  url: string;
+  apiKey: string;
+  model: string;
+  system: string;
+  user: string;
+  signal?: AbortSignal;
+  providerLabel: string;
+  extraHeaders?: Record<string, string>;
+}
 
+async function* streamOpenAiCompatible(
+  options: OpenAiStreamOptions,
+): AsyncGenerator<string> {
   let response: Response;
   try {
-    response = await fetch(`${config.xaiBaseUrl}/chat/completions`, {
+    response = await fetch(options.url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${config.xaiApiKey}`,
+        Authorization: `Bearer ${options.apiKey}`,
         "Content-Type": "application/json",
+        ...(options.extraHeaders ?? {}),
       },
-      signal,
+      signal: options.signal,
       body: JSON.stringify({
-        model: config.xaiModel,
+        model: options.model,
         stream: true,
         messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
+          { role: "system", content: options.system },
+          { role: "user", content: options.user },
         ],
       }),
     });
   } catch (error) {
     if (isAbortError(error)) return;
-    logger.warn("xAI request failed", { error: errorMessage(error) });
+    logger.warn(`${options.providerLabel} request failed`, {
+      error: errorMessage(error),
+    });
     throw new AppError(503, "LLM_ERROR", "Could not reach the language model");
   }
 
   if (!response.ok) {
-    logger.warn("xAI returned an error status", { status: response.status });
-    throw new AppError(
-      503,
-      "LLM_ERROR",
-      "The language model is currently unavailable",
-    );
+    throw await llmHttpError(response, options.providerLabel, options.model);
   }
 
   yield* iterateSseTokens(response, (row) => {
@@ -187,7 +242,72 @@ async function* streamWithXai(
   });
 }
 
+async function llmHttpError(
+  response: Response,
+  providerLabel: string,
+  model: string,
+): Promise<AppError> {
+  const detail = await readErrorMessage(response);
+  logger.warn(`${providerLabel} returned an error status`, {
+    status: response.status,
+    model,
+    error: detail,
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    return new AppError(
+      503,
+      "LLM_ERROR",
+      `${providerLabel} rejected the API key. Check the key and remaining credits.`,
+    );
+  }
+  if (response.status === 402) {
+    return new AppError(
+      503,
+      "LLM_ERROR",
+      `${providerLabel} needs credits for this model. Use a :free model or add credits.`,
+    );
+  }
+  if (response.status === 429) {
+    return new AppError(
+      503,
+      "LLM_ERROR",
+      `${providerLabel} rate-limited the request. Try again in a moment.`,
+    );
+  }
+  return new AppError(503, "LLM_ERROR", "The language model is currently unavailable");
+}
+
+async function readErrorMessage(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as {
+      error?: { message?: unknown } | string;
+      message?: unknown;
+    };
+    if (typeof body.error === "string") return body.error;
+    if (body.error && typeof body.error === "object" && typeof body.error.message === "string") {
+      return body.error.message;
+    }
+    if (typeof body.message === "string") return body.message;
+  } catch {
+    // ignore parse failures
+  }
+  return `HTTP ${response.status}`;
+}
+
 export async function isLlmReachable(): Promise<boolean> {
+  if (config.llmProvider === "openrouter") {
+    if (!config.openrouterApiKey) return false;
+    try {
+      const response = await fetch(`${config.openrouterBaseUrl}/key`, {
+        headers: { Authorization: `Bearer ${config.openrouterApiKey}` },
+        signal: AbortSignal.timeout(2000),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
   if (config.llmProvider === "xai") {
     return Boolean(config.xaiApiKey);
   }
@@ -202,7 +322,9 @@ export async function isLlmReachable(): Promise<boolean> {
 }
 
 export function activeModelName(): string {
-  return config.llmProvider === "xai" ? config.xaiModel : config.ollamaModel;
+  if (config.llmProvider === "openrouter") return config.openrouterModel;
+  if (config.llmProvider === "xai") return config.xaiModel;
+  return config.ollamaModel;
 }
 
 async function* iterateNdjsonTokens(

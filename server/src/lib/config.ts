@@ -21,7 +21,12 @@ function stringEnv(name: string, fallback: string): string {
   return raw && raw.trim() ? raw.trim() : fallback;
 }
 
-const llmProvider = stringEnv("LLM_PROVIDER", "ollama").toLowerCase();
+export type LlmProvider = "openrouter" | "ollama" | "xai";
+
+function resolveLlmProvider(raw: string): LlmProvider {
+  if (raw === "openrouter" || raw === "ollama" || raw === "xai") return raw;
+  return "openrouter";
+}
 
 export const config = {
   port: numberEnv("PORT", 4000),
@@ -29,9 +34,15 @@ export const config = {
   dbPath: path.isAbsolute(stringEnv("DB_PATH", "./data/inbox.db"))
     ? stringEnv("DB_PATH", "./data/inbox.db")
     : path.resolve(serverRoot, stringEnv("DB_PATH", "./data/inbox.db")),
+  llmProvider: resolveLlmProvider(stringEnv("LLM_PROVIDER", "openrouter").toLowerCase()),
+  openrouterApiKey: process.env.OPENROUTER_API_KEY?.trim() ?? "",
+  openrouterModel: stringEnv("OPENROUTER_MODEL", "openai/gpt-oss-20b:free"),
+  openrouterBaseUrl: stringEnv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").replace(
+    /\/$/,
+    "",
+  ),
   ollamaHost: stringEnv("OLLAMA_HOST", "http://localhost:11434").replace(/\/$/, ""),
-  ollamaModel: stringEnv("OLLAMA_MODEL", "gpt-oss:20b-cloud"),
-  llmProvider: llmProvider === "xai" ? "xai" : "ollama",
+  ollamaModel: stringEnv("OLLAMA_MODEL", "llama3.1:8b"),
   xaiApiKey: process.env.XAI_API_KEY?.trim() ?? "",
   xaiModel: stringEnv("XAI_MODEL", "grok-4.6"),
   xaiBaseUrl: stringEnv("XAI_BASE_URL", "https://api.x.ai/v1").replace(/\/$/, ""),

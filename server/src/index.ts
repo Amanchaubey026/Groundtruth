@@ -64,6 +64,7 @@ app.listen(config.port, "0.0.0.0", () => {
     port: config.port,
     clientUrl: config.clientUrl,
     llmProvider: config.llmProvider,
+    model: activeModelName(),
   });
 
   warmupEmbeddings().catch((error: unknown) => {

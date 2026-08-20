@@ -2,7 +2,7 @@
 
 A small production-style web app for a single user: save notes and URLs, retrieve semantically relevant chunks, and generate grounded answers with cited sources.
 
-This is intentionally small. The stack is local-first (SQLite, MiniLM embeddings, Ollama) so a reviewer can run the full RAG path without API keys or extra infrastructure.
+This is intentionally small. Embeddings and storage stay local (SQLite + MiniLM). The default generator is a hosted OpenRouter free model so a reviewer can run the RAG path without installing Ollama.
 
 ## Overview
 
@@ -22,7 +22,7 @@ The application is a personal knowledge inbox:
 - Save URLs with server-side fetch + Readability extraction
 - SQLite storage for items, chunks, and embeddings
 - Local embeddings (`Xenova/all-MiniLM-L6-v2`)
-- LLM via Ollama (`gpt-oss:20b-cloud` by default)
+- LLM via OpenRouter (`openai/gpt-oss-20b:free` by default), with optional local Ollama
 - Grounded RAG answers with numbered citations
 - Source snippets and similarity scores in the UI
 - Structured JSON logs and consistent API errors
@@ -54,7 +54,7 @@ The application is a personal knowledge inbox:
            │                                   │
      MiniLM embeddings                    grounded prompt
            │                                   │
-        SQLite                            Ollama / optional xAI
+        SQLite                            OpenRouter / optional local Ollama
                                                │
                                         answer + sources
 ```
@@ -74,8 +74,8 @@ HTTP request → validation → service → response
 | Vectors | `chunks.embedding` BLOBs | Explicitly allowed; no dedicated vector DB |
 | Retrieval | Brute-force cosine similarity | Simple and enough for a small corpus |
 | Embeddings | `Xenova/all-MiniLM-L6-v2` | Local, free, 384 dimensions |
-| LLM | Ollama (`gpt-oss:20b-cloud`) | Default model served through local Ollama |
-| Optional LLM | SpaceXAI (`grok-4.6`) | Hosted swap behind the same `llm.ts` interface |
+| LLM | OpenRouter (`openai/gpt-oss-20b:free`) | Hosted, no credits for the default `:free` model |
+| Optional LLM | Local Ollama (`llama3.1:8b`) | Offline swap behind the same `llm.ts` interface |
 | URL extraction | `fetch` + jsdom + Readability | Server-side readable content |
 | Frontend | React + Vite + TypeScript + Tailwind | Small UI, hooks only |
 
@@ -100,64 +100,46 @@ npm install
 
 `better-sqlite3` is a native addon. On Windows that requires a working C++ build toolchain (Visual Studio Build Tools with the "Desktop development with C++" workload).
 
-### 3. Install Ollama
-
-Install from [https://ollama.com](https://ollama.com).
-
-### 4. Pull a model
-
-Default (Ollama Cloud):
-
-```bash
-ollama pull gpt-oss:20b-cloud
-```
-
-Cloud models require an Ollama account. If pull asks you to sign in:
-
-```bash
-ollama signin
-```
-
-Fully local alternatives, if you prefer not to use Cloud:
-
-```bash
-ollama pull llama3.1:8b
-```
-
-or, on a lower-RAM machine:
-
-```bash
-ollama pull phi3:mini
-```
-
-Then set `OLLAMA_MODEL` in `.env` to the model you pulled.
-
-### 5. Start Ollama
-
-```bash
-ollama serve
-```
-
-If the installer already runs Ollama as a background service, this step may not be necessary. Ollama listens on `http://localhost:11434`.
-
-### 6. Configure environment
+### 3. Configure environment
 
 ```bash
 cp .env.example .env
 ```
 
-Defaults:
+Set `OPENROUTER_API_KEY` in `.env`. Defaults:
 
 ```env
 PORT=4000
-OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=gpt-oss:20b-cloud
 CLIENT_URL=http://localhost:5173
+LLM_PROVIDER=openrouter
+OPENROUTER_MODEL=openai/gpt-oss-20b:free
 MIN_SIMILARITY=0.30
 TOP_K=4
 ```
 
 The MiniLM embedding model downloads and caches automatically on first use (typically ~20–30 MB). The first ingest or query is slower while that happens.
+
+### Optional: local Ollama
+
+Ollama is not required. To run fully offline, install from [https://ollama.com](https://ollama.com), pull a **local** model (not an Ollama Cloud tag), and switch the provider:
+
+```bash
+ollama pull llama3.1:8b
+```
+
+On a lower-RAM machine:
+
+```bash
+ollama pull phi3:mini
+```
+
+```env
+LLM_PROVIDER=ollama
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=llama3.1:8b
+```
+
+Do not use Cloud tags such as `gpt-oss:20b-cloud`. Those need an Ollama account and a network round-trip.
 
 ## Running the Application
 
@@ -195,7 +177,7 @@ Error codes: `VALIDATION_ERROR`, `URL_FETCH_ERROR`, `URL_PARSE_ERROR`, `EMBEDDIN
 ### `GET /health`
 
 ```json
-{ "status": "ok", "llm": "reachable", "provider": "ollama" }
+{ "status": "ok", "llm": "reachable", "provider": "openrouter" }
 ```
 
 This endpoint stays `200` even if Ollama is down. `llm` is informational.
@@ -359,20 +341,29 @@ Tradeoff: search is **O(n)** in the number of chunks. At tens or hundreds of tho
 
 ## LLM Choice
 
-The RAG layer calls `services/llm.ts`, not Ollama directly. Today the default implementation is Ollama with `gpt-oss:20b-cloud`:
+The RAG layer calls `services/llm.ts`, not a provider SDK. The default generator is OpenRouter with a free model:
 
 ```text
-POST http://localhost:11434/api/chat
-model: gpt-oss:20b-cloud
+POST https://openrouter.ai/api/v1/chat/completions
+model: openai/gpt-oss-20b:free
 ```
 
-That model is served through the local Ollama process (`OLLAMA_HOST`) as an Ollama Cloud model, so you need Ollama installed and signed in. You can point `OLLAMA_MODEL` at a fully local model such as `llama3.1:8b` or `phi3:mini` instead.
+That needs an `OPENROUTER_API_KEY` but no paid credits for the default `:free` slug. Free models can be slower or rate-limited; they are enough for this assignment.
 
-Tradeoffs: Cloud models need network and an Ollama account; fully local models are hardware-bound and usually slower or weaker.
-
-### Optional hosted model (SpaceXAI)
+### Optional local Ollama
 
 To swap the generator without touching retrieval, chunking, embeddings, SQLite, or the frontend:
+
+```env
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=llama3.1:8b
+```
+
+Use a model you have already pulled locally (`llama3.1:8b`, `phi3:mini`, …). Do not use Ollama Cloud tags.
+
+Tradeoff: local models need extra setup and are hardware-bound. The hosted default is easier for a reviewer.
+
+### Optional hosted model (SpaceXAI)
 
 ```env
 LLM_PROVIDER=xai
@@ -380,7 +371,7 @@ XAI_API_KEY=...
 XAI_MODEL=grok-4.6
 ```
 
-That uses the OpenAI-compatible SpaceXAI endpoint at `https://api.x.ai/v1`. Default remains Ollama so the assignment runs without a paid key.
+That uses the OpenAI-compatible SpaceXAI endpoint at `https://api.x.ai/v1`. It needs credits.
 
 ## Citation Strategy
 
@@ -436,9 +427,13 @@ Trivial correctness vs. ANN recall/latency. Fine until the corpus grows.
 
 No key, no cost, weaker quality than large hosted embedders.
 
+### OpenRouter free model
+
+No paid credits, extra network hop, possible rate limits and variable latency. Easy for a reviewer.
+
 ### Local Ollama
 
-No key, extra setup, hardware-bound latency. A hosted model can replace only `llm.ts`.
+No key, extra setup, hardware-bound latency. Swaps only `llm.ts`.
 
 ### Synchronous ingestion
 
@@ -449,6 +444,7 @@ No key, extra setup, hardware-bound latency. A hosted model can replace only `ll
 - **Brute-force search** is O(n) per query.
 - **SQLite** does not like concurrent writers, multiple app instances, or multi-tenant isolation.
 - **Synchronous ingest** holds the HTTP request through embedding.
+- **Hosted LLM** depends on OpenRouter availability and free-model rate limits.
 - **Local Ollama** is not a horizontally scalable inference tier.
 - **No user_id** means there is no way to scope retrieval.
 
@@ -482,22 +478,21 @@ These are documented, not implemented.
 2. No authentication
 3. SQLite is not for large concurrent workloads
 4. Brute-force vector search is O(n)
-5. Local LLM quality depends on the selected model
-6. Local LLM latency depends heavily on hardware
+5. Hosted free-model quality and latency vary by OpenRouter provider
+6. Local LLM quality and latency depend on the selected Ollama model and hardware
 7. URL ingestion only handles readable web pages
 8. No background ingestion queue
-9. No streaming LLM responses
-10. No reranking
-11. No semantic chunking
-12. No document deletion UI
-13. No multi-user isolation
-14. No production-grade SSRF firewall
-15. No automated evaluation dataset
+9. No reranking
+10. No semantic chunking
+11. No document deletion UI
+12. No multi-user isolation
+13. No production-grade SSRF firewall
+14. No automated evaluation dataset
 
 Basic URL fetch protections *are* implemented: http/https only, timeout, response size cap, content-type checks, redirect protocol check, no script execution, and fetched HTML is never rendered as live frontend HTML.
 
 ## What Was Intentionally Not Built
 
-Authentication, Redis, BullMQ, Kafka, Docker/Kubernetes, a dedicated vector DB, microservices, WebSockets, streaming LLM responses, agent workflows, semantic chunking, rerankers, multi-tenancy, advanced observability, cloud deployment, and CI/CD.
+Authentication, Redis, BullMQ, Kafka, Docker/Kubernetes, a dedicated vector DB, microservices, WebSockets, agent workflows, semantic chunking, rerankers, multi-tenancy, advanced observability, cloud deployment, and CI/CD.
 
 The goal is a small, intentional, production-aware assignment — not a production system compressed into a weekend.

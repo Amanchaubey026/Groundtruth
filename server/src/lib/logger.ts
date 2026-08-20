@@ -28,6 +28,7 @@ const SENSITIVE_KEYS = new Set([
   "secret",
   "password",
   "xai_api_key",
+  "openrouter_api_key",
 ]);
 
 function sanitize(fields: LogFields): LogFields {
