@@ -28,7 +28,7 @@ export function useLlm() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelectionState] = useState<LlmSelection>(() => {
-    return readStored() ?? { provider: "ollama", model: "llama3.1:8b" };
+    return readStored() ?? { provider: "ollama", model: "phi3:mini" };
   });
 
   const refresh = useCallback(async () => {

@@ -2,7 +2,7 @@
 
 Save notes or URLs, then ask questions. Answers come from a small RAG pipeline over *your* saved content, with cited source snippets.
 
-Embeddings and SQLite stay local. The **default LLM is Ollama `llama3.1:8b`**. Pick another pulled model (or OpenRouter, if a key is set) in the header. You do not need to change `.env` to switch models.
+Embeddings and SQLite stay local. The **default LLM is Ollama `phi3:mini`** (small and relatively fast). Pick another pulled model (or OpenRouter, if a key is set) in the header. You do not need to change `.env` to switch models.
 
 ## Run
 
@@ -30,22 +30,22 @@ MiniLM embeddings (~20–30 MB) download by themselves on first ingest or query.
 
 ## Ollama (default)
 
-The UI defaults to **`llama3.1:8b`**. The app does not auto-pull weights. If Ollama is down or that model is missing, a toast lists the steps.
+The UI defaults to **`phi3:mini`**. The app does not auto-pull weights. If Ollama is down or that model is missing, a toast lists the steps.
 
 1. Install [Ollama](https://ollama.com). The installer usually starts a background service. If `ollama list` fails, run `ollama serve`.
 2. Pull the default model **before** asking questions:
 
    ```bash
-   ollama pull llama3.1:8b
-   ```
-
-   Lower RAM (~8 GB or less):
-
-   ```bash
    ollama pull phi3:mini
    ```
 
-   Then choose `phi3:mini` in the header dropdown (click **Refresh** after the pull).
+   Stronger (slower) local option:
+
+   ```bash
+   ollama pull llama3.1:8b
+   ```
+
+   Then choose `llama3.1:8b` in the header dropdown (click **Refresh** after the pull).
 3. Confirm: `ollama list`
 4. In the app, **Refresh** models if the toast is still up.
 
@@ -93,7 +93,7 @@ Errors: `{ "error": { "message": "...", "code": "VALIDATION_ERROR", "steps": [".
 | `GET` | `/llm` | Default model, pulled Ollama names, dropdown options |
 | `POST` | `/ingest` | `{ "type": "note", "content": "..." }` or `{ "type": "url", "url": "https://..." }` → `201` |
 | `GET` | `/items` | Metadata + preview, not full bodies |
-| `POST` | `/query` | `{ "question": "...", "provider": "ollama", "model": "llama3.1:8b" }` — `stream: true` for SSE |
+| `POST` | `/query` | `{ "question": "...", "provider": "ollama", "model": "phi3:mini" }` — `stream: true` for SSE |
 
 Empty input → `400`. URL fetch/parse → `422`. LLM down / missing Ollama model → `503`.
 
@@ -105,7 +105,7 @@ Empty input → `400`. URL fetch/parse → `422`. LLM down / missing Ollama mode
 | MiniLM local embeddings | No extra API key | Weaker than large hosted embedders |
 | SQLite BLOBs + brute-force cosine | Single user, tiny corpus | O(n) search; not multi-instance |
 | Sync ingest | Demo is easy to follow | Slow for large pages / traffic |
-| Ollama `llama3.1:8b` default + UI picker | Reviewer can stay local; no `.env` edit to switch | You must install, pull, and run Ollama |
+| Ollama `phi3:mini` default + UI picker | Faster on modest hardware; no `.env` edit to switch | Weaker than 8B models; you must install, pull, and run Ollama |
 | OpenRouter as a dropdown option | Fallback if a key is present | Free models can be slow / rate-limited |
 
 Intentionally not built: auth, queues, Kubernetes, a vector DB, rerankers, multi-tenancy.

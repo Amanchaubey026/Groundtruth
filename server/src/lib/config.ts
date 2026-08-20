@@ -43,7 +43,7 @@ export const config = {
     "",
   ),
   ollamaHost: stringEnv("OLLAMA_HOST", "http://localhost:11434").replace(/\/$/, ""),
-  ollamaModel: stringEnv("OLLAMA_MODEL", "llama3.1:8b"),
+  ollamaModel: stringEnv("OLLAMA_MODEL", "phi3:mini"),
   xaiApiKey: process.env.XAI_API_KEY?.trim() ?? "",
   xaiModel: stringEnv("XAI_MODEL", "grok-4.6"),
   xaiBaseUrl: stringEnv("XAI_BASE_URL", "https://api.x.ai/v1").replace(/\/$/, ""),
