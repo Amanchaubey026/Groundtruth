@@ -26,7 +26,7 @@ export type LlmProvider = "openrouter" | "ollama" | "xai";
 
 function resolveLlmProvider(raw: string): LlmProvider {
   if (raw === "openrouter" || raw === "ollama" || raw === "xai") return raw;
-  return "openrouter";
+  return "ollama";
 }
 
 export const config = {
@@ -35,7 +35,7 @@ export const config = {
   dbPath: path.isAbsolute(stringEnv("DB_PATH", "./data/inbox.db"))
     ? stringEnv("DB_PATH", "./data/inbox.db")
     : path.resolve(serverRoot, stringEnv("DB_PATH", "./data/inbox.db")),
-  llmProvider: resolveLlmProvider(stringEnv("LLM_PROVIDER", "openrouter").toLowerCase()),
+  llmProvider: resolveLlmProvider(stringEnv("LLM_PROVIDER", "ollama").toLowerCase()),
   openrouterApiKey: process.env.OPENROUTER_API_KEY?.trim() ?? "",
   openrouterModel: stringEnv("OPENROUTER_MODEL", "openai/gpt-oss-20b:free"),
   openrouterBaseUrl: stringEnv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").replace(

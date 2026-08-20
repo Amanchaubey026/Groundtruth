@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 import {
+  ApiError,
   queryKnowledgeStream,
+  type LlmSelection,
   type QueryResult,
   type QuerySource,
 } from "../api/client";
@@ -16,7 +18,7 @@ export function useQuery() {
   const [sources, setSources] = useState<QuerySource[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
-  const ask = useCallback(async (nextQuestion: string) => {
+  const ask = useCallback(async (nextQuestion: string, llm?: LlmSelection) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -45,12 +47,14 @@ export function useQuery() {
           },
         },
         controller.signal,
+        llm,
       );
       setPhase((current) => (current === "retrieving" ? "done" : current));
     } catch (err) {
       if (controller.signal.aborted) return;
       setPhase("idle");
       setError(err instanceof Error ? err.message : "Failed to ask the question");
+      throw err instanceof ApiError ? err : new Error("Failed to ask the question");
     }
   }, []);
 

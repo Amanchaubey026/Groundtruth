@@ -5,12 +5,19 @@ import { logger } from "./logger.js";
 export class AppError extends Error {
   readonly statusCode: number;
   readonly code: ErrorCode;
+  readonly steps?: string[];
 
-  constructor(statusCode: number, code: ErrorCode, message: string) {
+  constructor(
+    statusCode: number,
+    code: ErrorCode,
+    message: string,
+    options?: { steps?: string[] },
+  ) {
     super(message);
     this.name = "AppError";
     this.statusCode = statusCode;
     this.code = code;
+    this.steps = options?.steps;
   }
 }
 
@@ -43,6 +50,7 @@ export function errorHandler(
       error: {
         message: err.message,
         code: err.code,
+        ...(err.steps && err.steps.length > 0 ? { steps: err.steps } : {}),
       },
     });
     return;

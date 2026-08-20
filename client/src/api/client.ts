@@ -41,15 +41,45 @@ export interface QueryStreamHandlers {
   onDone: (result: QueryResult) => void;
 }
 
+export type LlmProvider = "ollama" | "openrouter" | "xai";
+
+export interface LlmOption {
+  provider: LlmProvider;
+  model: string;
+  label: string;
+  available: boolean;
+}
+
+export interface LlmStatus {
+  defaultProvider: LlmProvider;
+  defaultModel: string;
+  ollama: {
+    reachable: boolean;
+    models: string[];
+  };
+  openrouter: {
+    configured: boolean;
+    model: string;
+  };
+  options: LlmOption[];
+}
+
+export interface LlmSelection {
+  provider: LlmProvider;
+  model: string;
+}
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
+  readonly steps?: string[];
 
-  constructor(message: string, status: number, code: string) {
+  constructor(message: string, status: number, code: string, steps?: string[]) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.steps = steps;
   }
 }
 
@@ -70,12 +100,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const error = parseError(data);
-    throw new ApiError(error.message, response.status, error.code);
+    throw new ApiError(error.message, response.status, error.code, error.steps);
   }
   return data as T;
 }
 
-function parseError(data: unknown): { message: string; code: string } {
+function parseError(data: unknown): { message: string; code: string; steps?: string[] } {
   if (
     data &&
     typeof data === "object" &&
@@ -83,10 +113,13 @@ function parseError(data: unknown): { message: string; code: string } {
     data.error &&
     typeof data.error === "object"
   ) {
-    const error = data.error as { message?: unknown; code?: unknown };
+    const error = data.error as { message?: unknown; code?: unknown; steps?: unknown };
     return {
       message: typeof error.message === "string" ? error.message : "Request failed",
       code: typeof error.code === "string" ? error.code : "INTERNAL_ERROR",
+      steps: Array.isArray(error.steps)
+        ? error.steps.filter((step): step is string => typeof step === "string")
+        : undefined,
     };
   }
   return { message: "Request failed", code: "INTERNAL_ERROR" };
@@ -110,10 +143,15 @@ export function listItems(): Promise<{ items: ItemSummary[] }> {
   return request<{ items: ItemSummary[] }>("/items");
 }
 
+export function getLlmStatus(): Promise<LlmStatus> {
+  return request<LlmStatus>("/llm");
+}
+
 export async function queryKnowledgeStream(
   question: string,
   handlers: QueryStreamHandlers,
   signal?: AbortSignal,
+  llm?: LlmSelection,
 ): Promise<void> {
   let response: Response;
   try {
@@ -123,7 +161,11 @@ export async function queryKnowledgeStream(
         "Content-Type": "application/json",
         Accept: "text/event-stream",
       },
-      body: JSON.stringify({ question, stream: true }),
+      body: JSON.stringify({
+        question,
+        stream: true,
+        ...(llm ? { provider: llm.provider, model: llm.model } : {}),
+      }),
       signal,
     });
   } catch (error) {
@@ -134,7 +176,7 @@ export async function queryKnowledgeStream(
   if (!response.ok) {
     const data: unknown = await response.json().catch(() => null);
     const error = parseError(data);
-    throw new ApiError(error.message, response.status, error.code);
+    throw new ApiError(error.message, response.status, error.code, error.steps);
   }
 
   await readSse(response, (event, data) => {
@@ -157,11 +199,12 @@ export async function queryKnowledgeStream(
       return;
     }
     if (event === "error") {
-      const payload = data as { message?: string; code?: string };
+      const payload = data as { message?: string; code?: string; steps?: string[] };
       throw new ApiError(
         payload.message ?? "The language model failed",
         503,
         payload.code ?? "LLM_ERROR",
+        payload.steps,
       );
     }
   });

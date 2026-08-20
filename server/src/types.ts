@@ -1,5 +1,33 @@
 export type SourceType = "note" | "url";
 
+export type LlmProvider = "openrouter" | "ollama" | "xai";
+
+export interface LlmSelection {
+  provider: LlmProvider;
+  model: string;
+}
+
+export interface LlmOption {
+  provider: LlmProvider;
+  model: string;
+  label: string;
+  available: boolean;
+}
+
+export interface LlmStatus {
+  defaultProvider: LlmProvider;
+  defaultModel: string;
+  ollama: {
+    reachable: boolean;
+    models: string[];
+  };
+  openrouter: {
+    configured: boolean;
+    model: string;
+  };
+  options: LlmOption[];
+}
+
 export type ErrorCode =
   | "VALIDATION_ERROR"
   | "URL_FETCH_ERROR"

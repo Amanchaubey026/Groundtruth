@@ -1,6 +1,6 @@
 import { AppError } from "./errors.js";
-import { config } from "./config.js";
-import type { SourceType } from "../types.js";
+import { config, type LlmProvider } from "./config.js";
+import type { LlmSelection, SourceType } from "../types.js";
 
 export interface NoteIngestInput {
   type: "note";
@@ -98,6 +98,10 @@ export function parseHttpUrl(raw: string): string {
 }
 
 export function parseQuestion(body: unknown): string {
+  return parseQueryInput(body).question;
+}
+
+export function parseQueryInput(body: unknown): { question: string; llm: LlmSelection } {
   const record = asRecord(body);
   if (typeof record.question !== "string") {
     throw new AppError(400, "VALIDATION_ERROR", 'Field "question" is required');
@@ -113,7 +117,34 @@ export function parseQuestion(body: unknown): string {
       `Question exceeds the maximum length of ${config.maxQuestionChars} characters`,
     );
   }
-  return question;
+  return { question, llm: parseLlmSelection(record) };
+}
+
+function parseLlmSelection(record: Record<string, unknown>): LlmSelection {
+  const provider = parseOptionalProvider(record.provider);
+  const model = optionalString(record.model);
+
+  if (provider === "openrouter") {
+    return { provider, model: model ?? config.openrouterModel };
+  }
+  if (provider === "xai") {
+    return { provider, model: model ?? config.xaiModel };
+  }
+  return { provider: "ollama", model: model ?? config.ollamaModel };
+}
+
+function parseOptionalProvider(value: unknown): LlmProvider {
+  if (value === undefined || value === null || value === "") {
+    return config.llmProvider;
+  }
+  if (value === "openrouter" || value === "ollama" || value === "xai") {
+    return value;
+  }
+  throw new AppError(
+    400,
+    "VALIDATION_ERROR",
+    'Field "provider" must be "ollama", "openrouter", or "xai"',
+  );
 }
 
 export function isSourceType(value: string): value is SourceType {

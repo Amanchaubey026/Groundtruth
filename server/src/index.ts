@@ -7,6 +7,7 @@ import { initDb } from "./db/client.js";
 import { ingestRouter } from "./routes/ingest.js";
 import { itemsRouter } from "./routes/items.js";
 import { queryRouter } from "./routes/query.js";
+import { llmRouter } from "./routes/llm.js";
 import { warmupEmbeddings } from "./services/embeddings.js";
 import { activeModelName, isLlmReachable } from "./services/llm.js";
 
@@ -48,6 +49,7 @@ app.get("/health", async (_req, res) => {
 app.use(ingestRouter);
 app.use(itemsRouter);
 app.use(queryRouter);
+app.use(llmRouter);
 
 app.use((_req, res) => {
   res.status(404).json({

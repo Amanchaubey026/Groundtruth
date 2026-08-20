@@ -16,6 +16,7 @@ export default defineConfig({
         proxyTimeout: 600_000,
       },
       "/health": { target: "http://127.0.0.1:4000", changeOrigin: true },
+      "/llm": { target: "http://127.0.0.1:4000", changeOrigin: true },
     },
   },
 });

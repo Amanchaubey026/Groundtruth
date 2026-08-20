@@ -1,7 +1,7 @@
 /** Retrieve top chunks, then stream a grounded answer. Skip the LLM when nothing is similar enough. */
 import { config } from "../lib/config.js";
 import { logger } from "../lib/logger.js";
-import type { QueryResponse, QuerySource, RetrievedSource } from "../types.js";
+import type { LlmSelection, QueryResponse, QuerySource, RetrievedSource } from "../types.js";
 import { embedQuery } from "./embeddings.js";
 import { activeModelName, streamAnswer } from "./llm.js";
 import { searchSimilar, toRetrievedSources } from "./vectorStore.js";
@@ -20,10 +20,11 @@ export async function answerQuestion(
   question: string,
   requestId?: string,
   signal?: AbortSignal,
+  llm?: LlmSelection,
 ): Promise<QueryResponse> {
   let answer = "";
   let sources: QuerySource[] = [];
-  for await (const event of streamQuestion(question, requestId, signal)) {
+  for await (const event of streamQuestion(question, requestId, signal, llm)) {
     if (event.type === "sources") sources = event.sources;
     if (event.type === "token") answer += event.text;
     if (event.type === "done") {
@@ -37,6 +38,7 @@ export async function* streamQuestion(
   question: string,
   requestId?: string,
   signal?: AbortSignal,
+  llm?: LlmSelection,
 ): AsyncGenerator<QueryStreamEvent> {
   const startedAt = Date.now();
   const queryVector = await embedQuery(question);
@@ -55,7 +57,7 @@ export async function* streamQuestion(
       retrievedChunks: 0,
       topSimilarity,
       llmDurationMs: 0,
-      model: activeModelName(),
+      model: llm?.model ?? activeModelName(),
       durationMs: Date.now() - startedAt,
     });
     yield { type: "token", text: NO_CONTENT_ANSWER };
@@ -65,7 +67,7 @@ export async function* streamQuestion(
 
   const llmStartedAt = Date.now();
   let answer = "";
-  for await (const token of streamAnswer(retrievedSources, question, signal)) {
+  for await (const token of streamAnswer(retrievedSources, question, signal, llm)) {
     if (!token) continue;
     answer += token;
     yield { type: "token", text: token };
@@ -78,7 +80,7 @@ export async function* streamQuestion(
     retrievedChunks: sources.length,
     topSimilarity,
     llmDurationMs: Date.now() - llmStartedAt,
-    model: activeModelName(),
+    model: llm?.model ?? activeModelName(),
     streamed: true,
     durationMs: Date.now() - startedAt,
   });

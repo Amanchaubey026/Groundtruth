@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { AppError, asyncHandler } from "../lib/errors.js";
 import { openSse } from "../lib/sse.js";
-import { parseQuestion } from "../lib/validation.js";
+import { parseQueryInput } from "../lib/validation.js";
 import { answerQuestion, streamQuestion } from "../services/rag.js";
 
 export const queryRouter = Router();
@@ -9,11 +9,11 @@ export const queryRouter = Router();
 queryRouter.post(
   "/query",
   asyncHandler(async (req, res) => {
-    const question = parseQuestion(req.body);
+    const { question, llm } = parseQueryInput(req.body);
     const stream = req.body?.stream === true;
 
     if (!stream) {
-      const result = await answerQuestion(question, req.requestId);
+      const result = await answerQuestion(question, req.requestId, undefined, llm);
       res.status(200).json(result);
       return;
     }
@@ -26,7 +26,7 @@ queryRouter.post(
 
     const sse = openSse(res);
     try {
-      for await (const event of streamQuestion(question, req.requestId, controller.signal)) {
+      for await (const event of streamQuestion(question, req.requestId, controller.signal, llm)) {
         if (controller.signal.aborted) break;
         sse.send(event.type, event);
       }
@@ -39,6 +39,7 @@ queryRouter.post(
         sse.send("error", {
           message: appError.message,
           code: appError.code,
+          ...(appError.steps && appError.steps.length > 0 ? { steps: appError.steps } : {}),
         });
       }
     } finally {

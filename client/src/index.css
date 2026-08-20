@@ -215,3 +215,33 @@ body {
     opacity: 0;
   }
 }
+
+.toast {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  width: min(24rem, calc(100vw - 2rem));
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 0.9rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  padding: 1rem 1.1rem;
+}
+
+.toast ol {
+  margin: 0.6rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.toast li {
+  margin: 0.35rem 0;
+}
+
+.toast code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8em;
+  background: #f3f3f3;
+  padding: 0.08em 0.32em;
+  border-radius: 0.25rem;
+}

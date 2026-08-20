@@ -2,7 +2,7 @@
 import { config } from "../lib/config.js";
 import { AppError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
-import type { RetrievedSource } from "../types.js";
+import type { LlmOption, LlmSelection, LlmStatus, RetrievedSource } from "../types.js";
 
 const SYSTEM_PROMPT = `You are an assistant answering questions about a user's saved knowledge.
 
@@ -47,9 +47,10 @@ export async function generateAnswer(
   sources: RetrievedSource[],
   question: string,
   signal?: AbortSignal,
+  llm?: LlmSelection,
 ): Promise<string> {
   let answer = "";
-  for await (const token of streamAnswer(sources, question, signal)) {
+  for await (const token of streamAnswer(sources, question, signal, llm)) {
     answer += token;
   }
   const trimmed = answer.trim();
@@ -67,45 +68,54 @@ export async function* streamAnswer(
   sources: RetrievedSource[],
   question: string,
   signal?: AbortSignal,
+  llm?: LlmSelection,
 ): AsyncGenerator<string> {
   const user = buildGroundedUserPrompt(sources, question);
-  yield* streamChat(SYSTEM_PROMPT, user, signal);
+  yield* streamChat(SYSTEM_PROMPT, user, signal, llm);
+}
+
+function resolveSelection(llm?: LlmSelection): LlmSelection {
+  if (llm) return llm;
+  return { provider: config.llmProvider, model: activeModelName() };
 }
 
 async function* streamChat(
   system: string,
   user: string,
   signal?: AbortSignal,
+  llm?: LlmSelection,
 ): AsyncGenerator<string> {
   // Only this function branches on provider. Chunking, embeddings, and SQLite stay the same.
-  if (config.llmProvider === "openrouter") {
-    yield* streamWithOpenRouter(system, user, signal);
+  const selection = resolveSelection(llm);
+  if (selection.provider === "openrouter") {
+    yield* streamWithOpenRouter(system, user, selection.model, signal);
     return;
   }
-  if (config.llmProvider === "xai") {
-    yield* streamWithXai(system, user, signal);
+  if (selection.provider === "xai") {
+    yield* streamWithXai(system, user, selection.model, signal);
     return;
   }
-  yield* streamWithOllama(system, user, signal);
+  yield* streamWithOllama(system, user, selection.model, signal);
 }
 
 async function* streamWithOpenRouter(
   system: string,
   user: string,
+  model: string,
   signal?: AbortSignal,
 ): AsyncGenerator<string> {
   if (!config.openrouterApiKey) {
     throw new AppError(
       503,
       "LLM_ERROR",
-      "OPENROUTER_API_KEY is required when LLM_PROVIDER=openrouter",
+      "OPENROUTER_API_KEY is required for OpenRouter",
     );
   }
 
   yield* streamOpenAiCompatible({
     url: `${config.openrouterBaseUrl}/chat/completions`,
     apiKey: config.openrouterApiKey,
-    model: config.openrouterModel,
+    model,
     system,
     user,
     signal,
@@ -120,20 +130,21 @@ async function* streamWithOpenRouter(
 async function* streamWithXai(
   system: string,
   user: string,
+  model: string,
   signal?: AbortSignal,
 ): AsyncGenerator<string> {
   if (!config.xaiApiKey) {
     throw new AppError(
       503,
       "LLM_ERROR",
-      "XAI_API_KEY is required when LLM_PROVIDER=xai",
+      "XAI_API_KEY is required for xAI",
     );
   }
 
   yield* streamOpenAiCompatible({
     url: `${config.xaiBaseUrl}/chat/completions`,
     apiKey: config.xaiApiKey,
-    model: config.xaiModel,
+    model,
     system,
     user,
     signal,
@@ -144,8 +155,11 @@ async function* streamWithXai(
 async function* streamWithOllama(
   system: string,
   user: string,
+  model: string,
   signal?: AbortSignal,
 ): AsyncGenerator<string> {
+  await assertOllamaModel(model);
+
   const url = `${config.ollamaHost}/api/chat`;
   let response: Response;
   try {
@@ -154,7 +168,7 @@ async function* streamWithOllama(
       headers: { "Content-Type": "application/json" },
       signal,
       body: JSON.stringify({
-        model: config.ollamaModel,
+        model,
         stream: true,
         think: false,
         messages: [
@@ -169,15 +183,26 @@ async function* streamWithOllama(
     throw new AppError(
       503,
       "LLM_ERROR",
-      "Could not reach the language model. Is Ollama running?",
+      "Could not reach Ollama. Is it running?",
+      { steps: ollamaSetupSteps(model, "not_running") },
     );
   }
 
   if (!response.ok) {
+    const detail = await readErrorMessage(response.clone());
     logger.warn("Ollama returned an error status", {
       status: response.status,
-      model: config.ollamaModel,
+      model,
+      error: detail,
     });
+    if (isMissingModelError(detail, response.status)) {
+      throw new AppError(
+        503,
+        "LLM_ERROR",
+        `Ollama model ${model} is not pulled.`,
+        { steps: ollamaSetupSteps(model, "model_missing") },
+      );
+    }
     throw new AppError(
       503,
       "LLM_ERROR",
@@ -297,30 +322,129 @@ async function readErrorMessage(response: Response): Promise<string> {
   return `HTTP ${response.status}`;
 }
 
+export function ollamaSetupSteps(
+  model: string,
+  kind: "not_running" | "model_missing",
+): string[] {
+  const pull = `ollama pull ${model}`;
+  if (kind === "not_running") {
+    return [
+      "Install Ollama from https://ollama.com (the installer usually starts it).",
+      "If needed, run: ollama serve",
+      pull,
+      "Confirm with: ollama list",
+      "Click Refresh models in the header.",
+    ];
+  }
+  return [
+    pull,
+    "Confirm with: ollama list — the name must match exactly.",
+    "Click Refresh models in the header.",
+    "Then ask your question again.",
+  ];
+}
+
+export async function listOllamaModels(): Promise<{ reachable: boolean; models: string[] }> {
+  try {
+    const response = await fetch(`${config.ollamaHost}/api/tags`, {
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!response.ok) return { reachable: false, models: [] };
+    const body = (await response.json()) as { models?: Array<{ name?: unknown }> };
+    const names = new Set<string>();
+    for (const row of body.models ?? []) {
+      if (typeof row.name === "string" && row.name.trim()) {
+        names.add(row.name.trim());
+      }
+    }
+    return { reachable: true, models: [...names].sort() };
+  } catch {
+    return { reachable: false, models: [] };
+  }
+}
+
+function ollamaHasModel(pulled: string[], wanted: string): boolean {
+  const want = wanted.toLowerCase();
+  return pulled.some((name) => name.toLowerCase() === want);
+}
+
+async function assertOllamaModel(model: string): Promise<void> {
+  const { reachable, models } = await listOllamaModels();
+  if (!reachable) {
+    throw new AppError(
+      503,
+      "LLM_ERROR",
+      "Could not reach Ollama. Is it running?",
+      { steps: ollamaSetupSteps(model, "not_running") },
+    );
+  }
+  if (!ollamaHasModel(models, model)) {
+    throw new AppError(
+      503,
+      "LLM_ERROR",
+      `Ollama model ${model} is not pulled.`,
+      { steps: ollamaSetupSteps(model, "model_missing") },
+    );
+  }
+}
+
+function isMissingModelError(detail: string, status: number): boolean {
+  const lower = detail.toLowerCase();
+  return status === 404 || lower.includes("not found") || lower.includes("pull");
+}
+
+export async function getLlmStatus(): Promise<LlmStatus> {
+  const ollama = await listOllamaModels();
+  const defaultModel = config.ollamaModel;
+  const options: LlmOption[] = [];
+
+  if (!ollamaHasModel(ollama.models, defaultModel)) {
+    options.push({
+      provider: "ollama",
+      model: defaultModel,
+      label: `${defaultModel} (Ollama · not pulled)`,
+      available: false,
+    });
+  }
+  for (const model of ollama.models) {
+    options.push({
+      provider: "ollama",
+      model,
+      label: `${model} (Ollama)`,
+      available: true,
+    });
+  }
+
+  if (config.openrouterApiKey) {
+    options.push({
+      provider: "openrouter",
+      model: config.openrouterModel,
+      label: `OpenRouter · ${config.openrouterModel}`,
+      available: true,
+    });
+  }
+
+  return {
+    defaultProvider: "ollama",
+    defaultModel,
+    ollama,
+    openrouter: {
+      configured: Boolean(config.openrouterApiKey),
+      model: config.openrouterModel,
+    },
+    options,
+  };
+}
+
 export async function isLlmReachable(): Promise<boolean> {
   if (config.llmProvider === "openrouter") {
-    if (!config.openrouterApiKey) return false;
-    try {
-      const response = await fetch(`${config.openrouterBaseUrl}/key`, {
-        headers: { Authorization: `Bearer ${config.openrouterApiKey}` },
-        signal: AbortSignal.timeout(2000),
-      });
-      return response.ok;
-    } catch {
-      return false;
-    }
+    return Boolean(config.openrouterApiKey);
   }
   if (config.llmProvider === "xai") {
     return Boolean(config.xaiApiKey);
   }
-  try {
-    const response = await fetch(`${config.ollamaHost}/api/tags`, {
-      signal: AbortSignal.timeout(2000),
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
+  const { reachable } = await listOllamaModels();
+  return reachable;
 }
 
 export function activeModelName(): string {
