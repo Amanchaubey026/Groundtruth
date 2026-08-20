@@ -53,6 +53,16 @@ export function useQuery() {
     }
   }, []);
 
+  const reset = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setPhase("idle");
+    setError(null);
+    setQuestion(null);
+    setAnswer("");
+    setSources([]);
+  }, []);
+
   const loading = phase === "retrieving" || phase === "streaming";
 
   return {
@@ -63,5 +73,6 @@ export function useQuery() {
     answer,
     sources,
     ask,
+    reset,
   };
 }

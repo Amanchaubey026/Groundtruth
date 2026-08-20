@@ -3,10 +3,11 @@ import { useState, type FormEvent } from "react";
 interface QueryBoxProps {
   loading: boolean;
   error: string | null;
+  autoFocus?: boolean;
   onAsk: (question: string) => Promise<void>;
 }
 
-export function QueryBox({ loading, error, onAsk }: QueryBoxProps) {
+export function QueryBox({ loading, error, autoFocus = false, onAsk }: QueryBoxProps) {
   const [question, setQuestion] = useState("");
 
   async function onSubmit(event: FormEvent) {
@@ -31,6 +32,7 @@ export function QueryBox({ loading, error, onAsk }: QueryBoxProps) {
             placeholder="e.g. What is retrieval-augmented generation?"
             className="field"
             disabled={loading}
+            autoFocus={autoFocus}
           />
         </label>
 

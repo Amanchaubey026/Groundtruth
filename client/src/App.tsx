@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AddItemForm } from "./components/AddItemForm";
 import { AnswerPanel } from "./components/AnswerPanel";
 import { ItemList } from "./components/ItemList";
@@ -7,18 +8,37 @@ import { useQuery } from "./hooks/useQuery";
 
 export default function App() {
   const { items, loading: itemsLoading, error: itemsError, refresh } = useItems();
-  const { phase, loading: queryLoading, error: queryError, question, answer, sources, ask } =
-    useQuery();
+  const {
+    phase,
+    loading: queryLoading,
+    error: queryError,
+    question,
+    answer,
+    sources,
+    ask,
+    reset,
+  } = useQuery();
+  const [chatKey, setChatKey] = useState(0);
+
+  function startNewChat() {
+    reset();
+    setChatKey((current) => current + 1);
+  }
 
   return (
     <div className="min-h-screen">
       <header className="border-b border-line bg-card">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4">
-          <Mark />
-          <div>
-            <p className="font-display text-lg leading-none tracking-tight">Ground Truth</p>
-            <p className="mt-1 text-sm text-muted">Save notes or links, then ask questions.</p>
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <Mark />
+            <div>
+              <p className="font-display text-lg leading-none tracking-tight">Ground Truth</p>
+              <p className="mt-1 text-sm text-muted">Save notes or links, then ask questions.</p>
+            </div>
           </div>
+          <button type="button" className="btn-secondary shrink-0" onClick={startNewChat}>
+            New chat
+          </button>
         </div>
       </header>
 
@@ -28,8 +48,15 @@ export default function App() {
           <ItemList items={items} loading={itemsLoading} error={itemsError} />
         </div>
         <div className="flex flex-col gap-4">
-          <QueryBox loading={queryLoading} error={queryError} onAsk={ask} />
+          <QueryBox
+            key={chatKey}
+            loading={queryLoading}
+            error={queryError}
+            autoFocus={chatKey > 0}
+            onAsk={ask}
+          />
           <AnswerPanel
+            key={`answer-${chatKey}`}
             phase={phase}
             question={question}
             answer={answer}
